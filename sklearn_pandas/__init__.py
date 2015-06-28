@@ -1,4 +1,3 @@
-
 __version__ = '0.0.10'
 
 import numpy as np
@@ -11,6 +10,7 @@ import sys
 if sys.version_info >= (3, 0):
     basestring = str
 
+
 def cross_val_score(model, X, *args, **kwargs):
     X = DataWrapper(X)
     return cross_validation.cross_val_score(model, X, *args, **kwargs)
@@ -20,13 +20,16 @@ class GridSearchCV(grid_search.GridSearchCV):
     def fit(self, X, *params, **kwparams):
         super(GridSearchCV, self).fit(DataWrapper(X), *params, **kwparams)
 
+
     def predict(self, X, *params, **kwparams):
         super(GridSearchCV, self).fit(DataWrapper(X), *params, **kwparams)
+
 
 try:
     class RandomizedSearchCV(grid_search.RandomizedSearchCV):
         def fit(self, X, *params, **kwparams):
             super(RandomizedSearchCV, self).fit(DataWrapper(X), *params, **kwparams)
+
 
         def predict(self, X, *params, **kwparams):
             super(RandomizedSearchCV, self).fit(DataWrapper(X), *params, **kwparams)
@@ -38,8 +41,10 @@ class DataWrapper(object):
     def __init__(self, df):
         self.df = df
 
+
     def __len__(self):
         return len(self.df)
+
 
     def __getitem__(self, key):
         return self.df.iloc[key]
@@ -49,30 +54,33 @@ class PassthroughTransformer(TransformerMixin):
     def fit(self, X, y=None, **fit_params):
         return self
 
+
     def transform(self, X):
         return np.array(X).astype(np.float)
 
 
 class DataFrameMapper(BaseEstimator, TransformerMixin):
-    '''
+    """
     Map Pandas data frame column subsets to their own
     sklearn transformation.
-    '''
+
+    """
+
 
     def __init__(self, features):
-        '''
+        """
         Params:
 
         features    a list of pairs. The first element is the pandas column
                     selector. This can be a string (for one column) or a list
                     of strings. The second element is an object that supports
                     sklearn's transform interface.
-        '''
+        """
         self.features = features
 
 
     def _get_col_subset(self, X, cols):
-        '''
+        """
         Get a subset of columns from the given table X.
 
         X       a Pandas dataframe; the table to select columns from
@@ -80,7 +88,7 @@ class DataFrameMapper(BaseEstimator, TransformerMixin):
                 to select
 
         Returns a numpy array with the data from the selected columns
-        '''
+        """
         return_vector = False
         if isinstance(cols, basestring):
             return_vector = True
@@ -95,7 +103,7 @@ class DataFrameMapper(BaseEstimator, TransformerMixin):
             X = X.df
 
         if return_vector:
-            t = X[cols[0]]
+            t = X[[cols[0]]]
         else:
             t = X.as_matrix(cols)
 
@@ -103,11 +111,11 @@ class DataFrameMapper(BaseEstimator, TransformerMixin):
 
 
     def fit(self, X, y=None):
-        '''
+        """
         Fit a transformation from the pipeline
 
         X       the data to fit
-        '''
+        """
         for columns, transformer in self.features:
             if transformer is not None:
                 transformer.fit(self._get_col_subset(X, columns))
@@ -115,18 +123,19 @@ class DataFrameMapper(BaseEstimator, TransformerMixin):
 
 
     def transform(self, X):
-        '''
+        """
         Transform the given data. Assumes that fit has already been called.
 
         X       the data to transform
-        '''
+        """
         extracted = []
         for columns, transformer in self.features:
             # columns could be a string or list of
             # strings; we don't care because pandas
             # will handle either.
             if transformer is not None:
-                fea = transformer.transform(self._get_col_subset(X, columns))
+                subset = self._get_col_subset(X, columns)
+                fea = transformer.transform(subset)
             else:
                 fea = self._get_col_subset(X, columns)
 
@@ -144,4 +153,3 @@ class DataFrameMapper(BaseEstimator, TransformerMixin):
         # were created from which input columns, so it's
         # assumed that that doesn't matter to the model.
         return np.hstack(extracted)
-
